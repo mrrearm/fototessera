@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generatore Fototessere A4</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #2c3e50, #3498db);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            border: 2px dashed #dee2e6;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section.dragover {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+
+        .upload-btn {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            margin: 10px;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,123,255,0.3);
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-group label {
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .control-group select,
+        .control-group input {
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .control-group select:focus,
+        .control-group input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .preview-section {
+            margin: 30px 0;
+        }
+
+        .a4-preview {
+            width: 100%;
+            max-width: 595px;
+            aspect-ratio: 210/297;
+            margin: 0 auto;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            background: white;
+            padding: 20px;
+            display: grid;
+            gap: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .photo-slot {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .photo-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: white;
+        }
+
+        .photo-slot.filled {
+            border-color: #28a745;
+            background: white;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #6c757d, #495057);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #dc3545, #c82333);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .crop-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .crop-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: auto;
+        }
+
+        .crop-area {
+            max-width: 500px;
+            max-height: 500px;
+            margin: 20px auto;
+            position: relative;
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .crop-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+            
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn {
+                padding: 12px 20px;
+                font-size: 0.9rem;
+            }
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Generatore Fototessere A4</h1>
+            <p>Crea documenti A4 ottimizzati per la stampa con le tue fototessere</p>
+        </div>
+
+        <div class="main-content">
+            <div class="upload-section" id="uploadSection">
+                <h3 style="margin-bottom: 20px; color: #495057;">Carica la tua foto</h3>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                <button class="upload-btn" id="uploadBtn">
+                    📷 Scegli Foto
+                </button>
+                <p style="margin-top: 15px; color: #6c757d;">Oppure trascina la foto qui sopra</p>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="photoCount">Numero di foto:</label>
+                    <select id="photoCount">
+                        <option value="4">4 foto (2x2)</option>
+                        <option value="6">6 foto (3x2)</option>
+                        <option value="8" selected>8 foto (4x2)</option>
+                        <option value="10">10 foto (5x2)</option>
+                        <option value="12">12 foto (4x3)</option>
+                        <option value="16">16 foto (4x4)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="imageQuality">Qualità immagine:</label>
+                    <select id="imageQuality">
+                        <option value="0.8">Buona</option>
+                        <option value="0.9" selected>Alta</option>
+                        <option value="1.0">Massima</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="preview-section">
+                <h3 style="margin-bottom: 20px; color: #495057;">Anteprima Documento A4</h3>
+                <div class="a4-preview" id="a4Preview">
+                    <!-- Le foto verranno inserite qui dinamicamente -->
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="generateBtn">
+                    📄 Genera PDF
+                </button>
+                <button class="btn btn-danger" id="clearBtn">
+                    🗑️ Cancella tutto
+                </button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Generazione PDF in corso...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inizializza jsPDF
+        const { jsPDF } = window.jspdf;
+        
+        let originalImage = null;
+        let croppedImage = null;
+        let currentPhotoCount = 8;
+        
+        // Formato fototessera standard fisso (35x45mm)
+        const photoSize = { width: 35, height: 45 };
+        const photoRatio = photoSize.width / photoSize.height;
+
+        // Elementi DOM
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const photoCount = document.getElementById('photoCount');
+        const generateBtn = document.getElementById('generateBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const a4Preview = document.getElementById('a4Preview');
+        const loading = document.getElementById('loading');
+
+        // Inizializzazione
+        document.addEventListener('DOMContentLoaded', function() {
+            updatePreview();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Caricamento file
+            uploadBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            // Drag & drop
+            const uploadSection = document.getElementById('uploadSection');
+            uploadSection.addEventListener('dragover', handleDragOver);
+            uploadSection.addEventListener('dragleave', handleDragLeave);
+            uploadSection.addEventListener('drop', handleDrop);
+            
+            // Controlli
+            photoCount.addEventListener('change', handlePhotoCountChange);
+            
+            // Pulsanti azione
+            generateBtn.addEventListener('click', generatePDF);
+            clearBtn.addEventListener('click', clearAll);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('uploadSection').classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('uploadSection').classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('uploadSection').classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                processFile(files[0]);
+            } else {
+                alert('Per favore trascina solo file immagine (JPG, PNG, GIF, etc.).');
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                processFile(file);
+            } else {
+                alert('Per favore seleziona solo file immagine (JPG, PNG, GIF, etc.).');
+            }
+        }
+
+        function processFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Per favore seleziona un file immagine valido.');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                alert('Il file è troppo grande. Seleziona un\'immagine più piccola (max 10MB).');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                originalImage = new Image();
+                originalImage.onload = function() {
+                    // Adatta automaticamente l'immagine al formato fototessera mantenendo tutto il contenuto
+                    prepareCroppedImage();
+                };
+                originalImage.onerror = function() {
+                    alert('Errore nel caricamento dell\'immagine. Riprova con un altro file.');
+                };
+                originalImage.src = e.target.result;
+            };
+            reader.onerror = function() {
+                alert('Errore nella lettura del file. Riprova.');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function prepareCroppedImage() {
+            // Crea un canvas per adattare l'immagine al formato fototessera
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Calcola le dimensioni per adattare l'immagine al formato 35x45mm mantenendo tutto il contenuto
+            let srcWidth = originalImage.width;
+            let srcHeight = originalImage.height;
+            let srcRatio = srcWidth / srcHeight;
+            
+            let dstWidth, dstHeight;
+            
+            if (srcRatio > photoRatio) {
+                // L'immagine è più larga del formato fototessera
+                dstHeight = srcHeight;
+                dstWidth = dstHeight * photoRatio;
+            } else {
+                // L'immagine è più alta del formato fototessera
+                dstWidth = srcWidth;
+                dstHeight = dstWidth / photoRatio;
+            }
+            
+            // Imposta le dimensioni del canvas
+            canvas.width = dstWidth;
+            canvas.height = dstHeight;
+            
+            // Calcola le coordinate per centrare l'immagine
+            const dx = (dstWidth - srcWidth) / 2;
+            const dy = (dstHeight - srcHeight) / 2;
+            
+            // Disegna l'immagine ridimensionata e centrata
+            ctx.fillStyle = 'white'; // Sfondo bianco per le aree non coperte
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(originalImage, dx, dy, srcWidth, srcHeight);
+            
+            // Converti in data URL
+            const quality = parseFloat(document.getElementById('imageQuality').value);
+            croppedImage = canvas.toDataURL('image/jpeg', quality);
+            
+            updatePreview();
+        }
+
+        function handlePhotoCountChange() {
+            currentPhotoCount = parseInt(photoCount.value);
+            updatePreview();
+        }
+
+        function updatePreview() {
+            a4Preview.innerHTML = '';
+            
+            // Calcola il layout della griglia
+            const { cols, rows } = calculateOptimalGrid(currentPhotoCount);
+            
+            a4Preview.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            a4Preview.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+            // Crea gli slot per le foto
+            for (let i = 0; i < currentPhotoCount; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'photo-slot';
+                
+                if (croppedImage) {
+                    const img = document.createElement('img');
+                    img.src = croppedImage;
+                    img.alt = 'Fototessera';
+                    slot.appendChild(img);
+                    slot.classList.add('filled');
+                } else {
+                    slot.textContent = `Foto ${i + 1}`;
+                }
+                
+                a4Preview.appendChild(slot);
+            }
+
+            // Abilita/disabilita i pulsanti
+            const hasImage = croppedImage !== null;
+            generateBtn.disabled = !hasImage;
+        }
+
+        function calculateOptimalGrid(count) {
+            const layouts = [
+                { count: 4, cols: 2, rows: 2 },
+                { count: 6, cols: 3, rows: 2 },
+                { count: 8, cols: 4, rows: 2 },
+                { count: 10, cols: 5, rows: 2 },
+                { count: 12, cols: 4, rows: 3 },
+                { count: 16, cols: 4, rows: 4 }
+            ];
+
+            const layout = layouts.find(l => l.count === count);
+            if (layout) return layout;
+
+            // Layout personalizzato
+            const cols = Math.ceil(Math.sqrt(count));
+            const rows = Math.ceil(count / cols);
+            return { cols, rows };
+        }
+
+        function clearAll() {
+            croppedImage = null;
+            originalImage = null;
+            fileInput.value = '';
+            updatePreview();
+        }
+
+        function generatePDF() {
+            if (!croppedImage) return;
+
+            loading.style.display = 'block';
+            
+            // Usiamo setTimeout per permettere all'UI di aggiornarsi prima della generazione del PDF
+            setTimeout(() => {
+                try {
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pageWidth = 210; // A4 width in mm
+                    const pageHeight = 297; // A4 height in mm
+                    const margin = 10;
+                    
+                    const { cols, rows } = calculateOptimalGrid(currentPhotoCount);
+                    
+                    const availableWidth = pageWidth - (margin * 2);
+                    const availableHeight = pageHeight - (margin * 2);
+                    
+                    // Calcola le dimensioni delle foto mantenendo il rapporto 35x45
+                    let photoWidth, photoHeight;
+                    
+                    // Calcola quante foto possono stare in larghezza
+                    const maxCols = Math.floor(availableWidth / photoSize.width);
+                    // Calcola quante foto possono stare in altezza
+                    const maxRows = Math.floor(availableHeight / photoSize.height);
+                    
+                    // Se abbiamo più colonne di quelle che possono stare, riduciamo le dimensioni
+                    if (cols > maxCols) {
+                        photoWidth = availableWidth / cols;
+                        photoHeight = photoWidth / photoRatio;
+                    } 
+                    // Se abbiamo più righe di quelle che possono stare, riduciamo le dimensioni
+                    else if (rows > maxRows) {
+                        photoHeight = availableHeight / rows;
+                        photoWidth = photoHeight * photoRatio;
+                    } 
+                    // Altrimenti usiamo le dimensioni standard
+                    else {
+                        photoWidth = photoSize.width;
+                        photoHeight = photoSize.height;
+                    }
+                    
+                    // Calcola lo spazio tra le foto
+                    const spacingX = (availableWidth - (photoWidth * cols)) / Math.max(cols - 1, 1);
+                    const spacingY = (availableHeight - (photoHeight * rows)) / Math.max(rows - 1, 1);
+                    
+                    // Aggiungi le foto al PDF
+                    let photoIndex = 0;
+                    for (let row = 0; row < rows && photoIndex < currentPhotoCount; row++) {
+                        for (let col = 0; col < cols && photoIndex < currentPhotoCount; col++) {
+                            const x = margin + (col * (photoWidth + spacingX));
+                            const y = margin + (row * (photoHeight + spacingY));
+                            
+                            pdf.addImage(croppedImage, 'JPEG', x, y, photoWidth, photoHeight);
+                            photoIndex++;
+                        }
+                    }
+                    
+                    // Salva il PDF
+                    const fileName = `fototessere_${currentPhotoCount}foto_${new Date().getTime()}.pdf`;
+                    pdf.save(fileName);
+                    
+                } catch (error) {
+                    console.error('Errore nella generazione del PDF:', error);
+                    alert('Errore nella generazione del PDF. Riprova.');
+                } finally {
+                    loading.style.display = 'none';
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>
